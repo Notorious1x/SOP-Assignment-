@@ -1,0 +1,86 @@
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1a1;
+}
+
+/* Nav link styles */
+.nav-link {
+  color: #4b5563;
+  transition: all 0.15s ease;
+}
+.nav-link:hover {
+  background-color: #f3f4f6;
+}
+.nav-link.active {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* Product grid card hover */
+#posProductGrid button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Table row hover */
+tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Toast animation */
+#toast {
+  animation: slideIn 0.3s ease;
+}
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Modal animation */
+.modal:not(.hidden) > div {
+  animation: modalIn 0.2s ease;
+}
+@keyframes modalIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Print styles */
+@media print {
+  nav, aside, .no-print {
+    display: none !important;
+  }
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* Receipt font */
+#receiptContent {
+  font-family: 'Courier New', Courier, monospace;
+}

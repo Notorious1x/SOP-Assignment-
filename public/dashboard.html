@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>Adams POS - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Top Navigation Bar -->
+  <nav class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-50">
+    <div class="flex items-center justify-between px-4 h-14">
+      <div class="flex items-center gap-3">
+        <button id="sidebarToggle" class="lg:hidden text-gray-600 hover:text-gray-800">
+          <i class="fas fa-bars text-xl"></i>
+        </button>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center">
+            <span class="text-white text-xs font-bold">GH₵</span>
+          </div>
+          <span class="font-bold text-gray-800">Adams POS</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <span id="currentDateTime" class="text-sm text-gray-500 hidden sm:block"></span>
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-user text-blue-600 text-sm"></i>
+          </div>
+          <div class="hidden sm:block">
+            <p id="navUserName" class="text-sm font-medium text-gray-700"></p>
+            <p id="navUserRole" class="text-xs text-gray-500"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <aside id="sidebar" class="fixed top-14 left-0 bottom-0 w-60 bg-white border-r border-gray-200 z-40 transform -translate-x-full lg:translate-x-0 transition-transform duration-200">
+    <nav class="p-3 space-y-1">
+      <a href="#" data-view="pos" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-shopping-cart w-5 text-center"></i> Point of Sale
+      </a>
+      <a href="#" data-view="products" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-box w-5 text-center"></i> Products
+      </a>
+      <a href="#" data-view="inventory" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-warehouse w-5 text-center"></i> Inventory
+      </a>
+      <a href="#" data-view="customers" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-users w-5 text-center"></i> Customers
+      </a>
+      <a href="#" data-view="sales" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-receipt w-5 text-center"></i> Sales History
+      </a>
+      <a href="#" data-view="shifts" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-clock w-5 text-center"></i> Shifts
+      </a>
+
+      <a href="#" data-view="settings" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+        <i class="fas fa-cog w-5 text-center"></i> Settings
+      </a>
+
+      <div id="adminNav" class="hidden">
+        <div class="border-t border-gray-200 my-3"></div>
+        <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Management</p>
+        <a href="#" data-view="reports" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+          <i class="fas fa-chart-bar w-5 text-center"></i> Reports
+        </a>
+        <a href="#" data-view="users" class="nav-link admin-only-strict flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium hidden">
+          <i class="fas fa-user-cog w-5 text-center"></i> Users
+        </a>
+        <a href="#" data-view="backup" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium">
+          <i class="fas fa-database w-5 text-center"></i> Backup
+        </a>
+      </div>
+
+      <div class="border-t border-gray-200 my-3"></div>
+      <a href="#" id="logoutBtn" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50">
+        <i class="fas fa-sign-out-alt w-5 text-center"></i> Logout
+      </a>
+    </nav>
+  </aside>
+
+  <!-- Overlay for mobile sidebar -->
+  <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden lg:hidden"></div>
+
+  <!-- Main Content Area -->
+  <main class="lg:ml-60 mt-14 p-4 sm:p-6">
+    <div id="view-pos" class="view-section">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Product Search & Grid -->
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-xl shadow-sm p-4">
+            <div class="flex flex-col sm:flex-row gap-3 mb-4">
+              <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fas fa-search"></i></span>
+                <input type="text" id="posSearch" placeholder="Search products or scan barcode..."
+                  class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              </div>
+              <button id="barcodeScanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2">
+                <i class="fas fa-camera"></i> Scan
+              </button>
+              <select id="posCategoryFilter" class="border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+            <div id="scannerContainer" class="hidden mb-4 relative">
+              <video id="scannerVideo" class="w-full max-h-48 rounded-lg bg-black object-cover"></video>
+              <button id="closeScannerBtn" class="absolute top-2 right-2 bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="posProductGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[calc(100vh-240px)] overflow-y-auto">
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-1">
+          <div class="bg-white rounded-xl shadow-sm p-4 sticky top-20">
+            <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <i class="fas fa-shopping-cart text-blue-600"></i> Shopping Cart
+            </h3>
+
+            <select id="posCustomer" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3 outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Walk-in Customer</option>
+            </select>
+
+            <div id="cartItems" class="space-y-2 max-h-60 overflow-y-auto mb-3">
+              <p class="text-gray-400 text-sm text-center py-4">Cart is empty</p>
+            </div>
+
+            <div class="border-t border-gray-200 pt-3 space-y-2">
+              <div class="flex justify-between text-sm"><span class="text-gray-500">Subtotal</span><span id="cartSubtotal" class="font-medium">GH₵0.00</span></div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500">Discount</span>
+                <div class="flex items-center gap-1">
+                  <span>GH₵</span>
+                  <input type="number" id="cartDiscount" value="0" min="0" step="0.01"
+                    class="w-20 border border-gray-300 rounded px-2 py-1 text-right text-sm outline-none focus:ring-1 focus:ring-blue-500">
+                </div>
+              </div>
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-gray-500">Tax (%)</span>
+                <input type="number" id="cartTax" value="0" min="0" step="0.5"
+                  class="w-20 border border-gray-300 rounded px-2 py-1 text-right text-sm outline-none focus:ring-1 focus:ring-blue-500">
+              </div>
+              <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-2">
+                <span>Total</span><span id="cartTotal">GH₵0.00</span>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-2">
+              <div id="shiftBar" class="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2 text-sm hidden">
+                <div class="flex items-center justify-between">
+                  <span id="shiftBarText" class="text-yellow-800"><i class="fas fa-clock"></i> No active shift</span>
+                  <button id="shiftBarBtn" class="text-xs font-medium px-2 py-1 rounded bg-yellow-200 hover:bg-yellow-300 text-yellow-800">Start Shift</button>
+                </div>
+              </div>
+              <select id="paymentMethod" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+                <option value="cash">Cash</option>
+                <option value="momo">Mobile Money</option>
+                <option value="card">Card (Paystack)</option>
+              </select>
+              <div id="cashPaymentSection">
+                <input type="number" id="amountPaid" placeholder="Amount paid" min="0" step="0.01"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <p id="changeDisplay" class="text-sm text-gray-500 mt-1 hidden">Change: <span class="font-bold text-green-600">GH₵0.00</span></p>
+              </div>
+              <div id="momoPaymentSection" class="hidden space-y-2">
+                <select id="momoProvider" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+                  <option value="mtn">MTN Mobile Money</option>
+                  <option value="telecel">Telecel Cash</option>
+                  <option value="airteltigo">AirtelTigo Money</option>
+                </select>
+                <input type="tel" id="momoPhone" placeholder="Phone number (e.g. 024XXXXXXX)"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              </div>
+              <div id="cardPaymentSection" class="hidden">
+                <p class="text-xs text-gray-500"><i class="fas fa-lock text-green-600"></i> Secure payment via Paystack</p>
+              </div>
+              <button id="checkoutBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <i class="fas fa-check-circle"></i> Complete Sale
+              </button>
+              <div class="flex gap-2">
+                <button id="qrCartBtn" class="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-600 font-medium py-2 rounded-lg transition text-sm">
+                  <i class="fas fa-qrcode"></i> QR Cart
+                </button>
+                <button id="clearCartBtn" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-medium py-2 rounded-lg transition text-sm">
+                  <i class="fas fa-trash"></i> Clear Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="view-products" class="view-section hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-box text-blue-600 mr-2"></i>Product Management</h2>
+          <button id="addProductBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 admin-only hidden">
+            <i class="fas fa-plus"></i> Add Product
+          </button>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+          <input type="text" id="productSearch" placeholder="Search products..."
+            class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          <select id="productCategoryFilter" class="border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+            <option value="">All Categories</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-left">
+                <th class="px-4 py-3 font-medium text-gray-600">ID</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Name</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Category</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Price</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Stock</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Barcode</th>
+                <th class="px-4 py-3 font-medium text-gray-600 admin-only hidden">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="productTableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="view-inventory" class="view-section hidden">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="bg-white rounded-xl shadow-sm p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center"><i class="fas fa-exclamation-triangle text-red-600"></i></div>
+            <div><p class="text-sm text-gray-500">Low Stock Items</p><p id="lowStockCount" class="text-2xl font-bold text-gray-800">0</p></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-boxes text-blue-600"></i></div>
+            <div><p class="text-sm text-gray-500">Total Products</p><p id="totalProductsCount" class="text-2xl font-bold text-gray-800">0</p></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center"><i class="fas fa-dollar-sign text-green-600"></i></div>
+            <div><p class="text-sm text-gray-500">Total Stock Value</p><p id="totalStockValue" class="text-2xl font-bold text-gray-800">GH₵0</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-exclamation-circle text-red-500 mr-2"></i>Low Stock Alert</h3>
+          <div id="lowStockList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-gray-800"><i class="fas fa-exchange-alt text-blue-500 mr-2"></i>Stock Adjustment</h3>
+          </div>
+          <form id="stockAdjustForm" class="space-y-3 admin-only hidden">
+            <select id="adjProduct" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+              <option value="">Select Product</option>
+            </select>
+            <select id="adjType" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+              <option value="restock">Restock</option>
+              <option value="adjustment">Adjustment</option>
+            </select>
+            <input type="number" id="adjQuantity" placeholder="Quantity (+ or -)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+            <input type="text" id="adjNotes" placeholder="Notes (optional)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium">
+              <i class="fas fa-check"></i> Apply Adjustment
+            </button>
+          </form>
+          <h3 class="font-bold text-gray-800 mt-4 mb-3"><i class="fas fa-history text-gray-500 mr-2"></i>Recent Activity</h3>
+          <div id="inventoryLog" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
+    <div id="view-customers" class="view-section hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+          <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-users text-blue-600 mr-2"></i>Customer Management</h2>
+          <button id="addCustomerBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-plus"></i> Add Customer
+          </button>
+        </div>
+        <input type="text" id="customerSearch" placeholder="Search customers..."
+          class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 mb-4">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-left">
+                <th class="px-4 py-3 font-medium text-gray-600">ID</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Name</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Phone</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Email</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Loyalty Points</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customerTableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="view-sales" class="view-section hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-receipt text-blue-600 mr-2"></i>Sales History</h2>
+        <div class="flex flex-col sm:flex-row gap-3 mb-4">
+          <input type="date" id="salesDateFrom" class="border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+          <input type="date" id="salesDateTo" class="border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none">
+          <button id="filterSalesBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            <i class="fas fa-filter"></i> Filter
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-left">
+                <th class="px-4 py-3 font-medium text-gray-600">Sale #</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Date</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Cashier</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Customer</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Total</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Payment</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="salesTableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="view-reports" class="view-section hidden">
+      <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-chart-bar text-blue-600 mr-2"></i>Reports & Analytics</h2>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button data-report="daily" class="report-tab bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">Daily Sales</button>
+        <button data-report="weekly" class="report-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Weekly Sales</button>
+        <button data-report="products" class="report-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Product Performance</button>
+        <button data-report="inventory" class="report-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Inventory</button>
+        <button data-report="cashier" class="report-tab bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium">Cashier Performance</button>
+      </div>
+
+      <div id="reportContent" class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <div id="reportDailyContent"></div>
+        <div id="reportWeeklyContent" class="hidden"></div>
+        <div id="reportProductsContent" class="hidden"></div>
+        <div id="reportInventoryContent" class="hidden"></div>
+        <div id="reportCashierContent" class="hidden"></div>
+      </div>
+    </div>
+    <div id="view-users" class="view-section hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-user-cog text-blue-600 mr-2"></i>User Management</h2>
+          <button id="addUserBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-plus"></i> Add User
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 text-left">
+                <th class="px-4 py-3 font-medium text-gray-600">ID</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Username</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Full Name</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Role</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Created</th>
+                <th class="px-4 py-3 font-medium text-gray-600">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="view-settings" class="view-section hidden">
+      <div class="max-w-2xl">
+        <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-cog text-blue-600 mr-2"></i>Settings</h2>
+
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4">
+          <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-store text-gray-500 mr-2"></i>Store Information</h3>
+          <form id="storeSettingsForm" class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
+              <input type="text" id="settingStoreName" value="Adams Store" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+              <input type="text" id="settingStoreAddress" value="Accra, Ghana" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input type="text" id="settingStorePhone" value="+233 30 000 0000" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+              <i class="fas fa-save"></i> Save Store Settings
+            </button>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-4">
+          <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-user-circle text-gray-500 mr-2"></i>Account</h3>
+          <form id="changePasswordForm" class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+              <input type="password" id="settingCurrentPwd" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+              <input type="password" id="settingNewPwd" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+              <i class="fas fa-key"></i> Change Password
+            </button>
+          </form>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-info-circle text-gray-500 mr-2"></i>About</h3>
+          <div class="text-sm text-gray-600 space-y-1">
+            <p><strong>System:</strong> Adams POS v1.0</p>
+            <p><strong>Currency:</strong> Ghana Cedi (GH&#8373;)</p>
+            <p><strong>Database:</strong> SQLite</p>
+            <p><strong>Framework:</strong> Node.js + Express</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="view-backup" class="view-section hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-database text-blue-600 mr-2"></i>Backup & Data Recovery</h2>
+          <p class="text-sm text-gray-500 mb-4">Export your database as a JSON file for backup purposes.</p>
+          <button id="exportBackupBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2">
+            <i class="fas fa-download"></i> Export Database Backup
+          </button>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+          <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-history text-gray-500 mr-2"></i>Backup History</h3>
+          <div id="backupList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-shifts" class="view-section hidden">
+      <div class="bg-white rounded-xl shadow-sm p-4 sm:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-clock text-blue-600 mr-2"></i>Shift Management</h2>
+          <button id="toggleShiftBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+            <i class="fas fa-play"></i> Start Shift
+          </button>
+        </div>
+        <div id="activeShiftInfo" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="font-medium text-green-800"><i class="fas fa-circle text-green-500 text-xs mr-1"></i> Active Shift</p>
+              <p id="activeShiftTime" class="text-sm text-green-600"></p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-gray-500">Starting Cash</p>
+              <p id="activeShiftCash" class="font-bold text-green-700"></p>
+            </div>
+          </div>
+        </div>
+        <h3 class="font-bold text-gray-800 mb-3">Shift History</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="bg-gray-50 text-left"><th class="px-4 py-3 font-medium text-gray-600">Cashier</th><th class="px-4 py-3 font-medium text-gray-600">Start</th><th class="px-4 py-3 font-medium text-gray-600">End</th><th class="px-4 py-3 font-medium text-gray-600 text-right">Sales</th><th class="px-4 py-3 font-medium text-gray-600 text-right">Cash Diff</th><th class="px-4 py-3 font-medium text-gray-600">Status</th></tr></thead>
+            <tbody id="shiftTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="shiftStartModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-sm">
+      <div class="p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-play text-green-600 mr-2"></i>Start Shift</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Starting Cash in Drawer (GH₵)</label>
+            <input type="number" id="startingCashInput" value="0" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button id="confirmStartShift" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium text-sm">Start Shift</button>
+            <button class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="shiftEndModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-md">
+      <div class="p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-stop text-red-600 mr-2"></i>End Shift</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cash in Drawer Now (GH₵)</label>
+            <input type="number" id="endingCashInput" value="0" min="0" step="0.01" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <textarea id="shiftEndNotes" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button id="confirmEndShift" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-medium text-sm">End Shift</button>
+            <button class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="shiftSummaryModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-md">
+      <div id="shiftSummaryContent" class="p-6"></div>
+      <div class="px-6 pb-6">
+        <button class="modal-close w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="qrModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-sm">
+      <div class="p-6 text-center">
+        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-qrcode text-purple-600 mr-2"></i>Cart QR Code</h3>
+        <div id="qrCodeDisplay" class="flex justify-center mb-3"></div>
+        <p class="text-xs text-gray-500">Customer can scan this to view cart items</p>
+      </div>
+      <div class="px-6 pb-6">
+        <button class="modal-close w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+  <div id="productModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <h3 id="productModalTitle" class="text-lg font-bold text-gray-800 mb-4">Add Product</h3>
+        <form id="productForm" class="space-y-3">
+          <input type="hidden" id="productFormId">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Product Name *</label>
+            <input type="text" id="productFormName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <input type="text" id="productFormCategory" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Price *</label>
+              <input type="number" id="productFormPrice" required step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+              <input type="number" id="productFormQuantity" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Barcode</label>
+              <input type="text" id="productFormBarcode" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
+            <input type="text" id="productFormSupplier" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-sm">Save</button>
+            <button type="button" class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div id="customerModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-lg">
+      <div class="p-6">
+        <h3 id="customerModalTitle" class="text-lg font-bold text-gray-800 mb-4">Add Customer</h3>
+        <form id="customerForm" class="space-y-3">
+          <input type="hidden" id="customerFormId">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+            <input type="text" id="customerFormName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input type="text" id="customerFormPhone" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="customerFormEmail" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <input type="text" id="customerFormAddress" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-sm">Save</button>
+            <button type="button" class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div id="userModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-lg">
+      <div class="p-6">
+        <h3 id="userModalTitle" class="text-lg font-bold text-gray-800 mb-4">Add User</h3>
+        <form id="userForm" class="space-y-3">
+          <input type="hidden" id="userFormId">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+            <input type="text" id="userFormFullName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+            <input type="text" id="userFormUsername" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password <span id="pwdHint" class="text-gray-400">(required)</span></label>
+            <input type="password" id="userFormPassword" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+            <select id="userFormRole" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="cashier">Cashier</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-sm">Save</button>
+            <button type="button" class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div id="receiptModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-sm">
+      <div id="receiptContent" class="p-6 font-mono text-sm"></div>
+      <div class="px-6 pb-6 flex gap-3">
+        <button id="printReceiptBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-sm">
+          <i class="fas fa-print"></i> Print
+        </button>
+        <button class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="fixed bottom-4 right-4 z-50 hidden">
+    <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
+      <i id="toastIcon" class="fas fa-check-circle text-green-400"></i>
+      <span id="toastMsg"></span>
+    </div>
+  </div>
+
+  <script src="https://js.paystack.co/v2/inline.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
