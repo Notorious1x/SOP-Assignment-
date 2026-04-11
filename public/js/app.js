@@ -35,6 +35,7 @@ async function api(url, options = {}) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!token || !currentUser) return; // Prevent execution if unauthenticated
   setupUI();
   setupNavigation();
   setupPOS();
@@ -247,6 +248,40 @@ function setupPOS() {
     cart = [];
     renderCart();
   });
+
+  document.getElementById('paystackActionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const reference = document.getElementById('paystackActionRef').value;
+    const type = document.getElementById('paystackActionType').value;
+    const inputValue = document.getElementById('paystackActionInput').value.trim();
+    if (!inputValue) return;
+
+    const submitBtn = document.getElementById('paystackActionSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+
+    const endpointMap = {
+      'send_otp': '/api/paystack/submit_otp',
+      'send_phone': '/api/paystack/submit_phone',
+      'send_birthday': '/api/paystack/submit_birthday'
+    };
+
+    const bodyField = type.replace('send_', '');
+    try {
+      const response = await api(endpointMap[type], {
+        method: 'POST',
+        body: JSON.stringify({ reference, [bodyField]: inputValue })
+      });
+      document.getElementById('paystackActionModal').classList.add('hidden');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Submit';
+      await handlePaystackStatus(response, window._paystackContext);
+    } catch (err) {
+      showToast(err.message, 'error');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Submit';
+    }
+  });
 }
 
 function addToCart(productId) {
@@ -352,31 +387,8 @@ async function processCheckout() {
         body: JSON.stringify({ amount: total, payment_type: 'momo', momo_provider: momoProvider, momo_phone: momoPhone })
       });
 
-      showToast(init.display_text || 'Check your phone to approve payment', 'info');
-
-      let attempts = 0;
-      const pollInterval = setInterval(async () => {
-        attempts++;
-        try {
-          const verify = await api(`/api/paystack/verify/${init.reference}`);
-          if (verify.status === 'success') {
-            clearInterval(pollInterval);
-            await completeSale({ paymentMethod: 'momo', amountPaid: total, customerId, discount, taxRate, paystackReference: init.reference, momoProvider, momoPhone });
-          } else if (attempts >= 60) {
-            clearInterval(pollInterval);
-            showToast('MoMo payment timed out. Try again.', 'error');
-            checkoutBtn.disabled = false;
-            checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
-          }
-        } catch (e) {
-          if (attempts >= 60) {
-            clearInterval(pollInterval);
-            showToast('Payment verification failed', 'error');
-            checkoutBtn.disabled = false;
-            checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
-          }
-        }
-      }, 5000);
+      const context = { paymentMethod: 'momo', total, customerId, discount, taxRate, momoProvider, momoPhone };
+      await handlePaystackStatus(init, context);
     } catch (err) {
       showToast(err.message, 'error');
       checkoutBtn.disabled = false;
@@ -453,6 +465,73 @@ async function completeSale({ paymentMethod, amountPaid, customerId, discount, t
     document.getElementById('checkoutBtn').disabled = false;
     document.getElementById('checkoutBtn').innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
   }
+}
+
+async function handlePaystackStatus(init, context) {
+  const { paymentMethod, total, customerId, discount, taxRate, momoProvider, momoPhone } = context;
+  const status = init.paystack_status || init.status;
+  
+  if (status === 'send_otp' || status === 'send_phone' || status === 'send_birthday') {
+    document.getElementById('paystackActionRef').value = init.reference;
+    document.getElementById('paystackActionType').value = status;
+    const titleObj = {
+      'send_otp': 'Enter OTP',
+      'send_phone': 'Enter Phone Number',
+      'send_birthday': 'Enter Birthday (YYYY-MM-DD)'
+    };
+    document.getElementById('paystackActionTitle').innerHTML = `<i class="fas fa-mobile-alt text-blue-600 mr-2"></i>${titleObj[status]}`;
+    document.getElementById('paystackActionDesc').textContent = init.display_text || `Please enter your ${status.split('_')[1]}`;
+    document.getElementById('paystackActionInput').value = '';
+    document.getElementById('paystackActionInput').placeholder = titleObj[status];
+    document.getElementById('paystackActionInput').type = status === 'send_birthday' ? 'date' : 'text';
+    document.getElementById('paystackActionModal').classList.remove('hidden');
+    window._paystackContext = context;
+    return;
+  }
+  
+  if (status === 'pay_offline' || status === 'pending') {
+    showToast(init.display_text || 'Check your phone to approve payment', 'info');
+    pollPaystackPayment(init.reference, context);
+    return;
+  }
+  
+  if (status === 'success') {
+    await completeSale({ paymentMethod, amountPaid: total, customerId, discount, taxRate, paystackReference: init.reference, momoProvider, momoPhone });
+    return;
+  }
+  
+  showToast(init.display_text || 'Payment failed', 'error');
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  checkoutBtn.disabled = false;
+  checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
+}
+
+function pollPaystackPayment(reference, context) {
+  const { paymentMethod, total, customerId, discount, taxRate, momoProvider, momoPhone } = context;
+  const checkoutBtn = document.getElementById('checkoutBtn');
+  let attempts = 0;
+  const pollInterval = setInterval(async () => {
+    attempts++;
+    try {
+      const verify = await api(`/api/paystack/verify/${reference}`);
+      if (verify.status === 'success') {
+        clearInterval(pollInterval);
+        await completeSale({ paymentMethod, amountPaid: total, customerId, discount, taxRate, paystackReference: reference, momoProvider, momoPhone });
+      } else if (attempts >= 60) {
+        clearInterval(pollInterval);
+        showToast('Payment timed out. Try again.', 'error');
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
+      }
+    } catch (e) {
+      if (attempts >= 60) {
+        clearInterval(pollInterval);
+        showToast('Payment verification failed', 'error');
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerHTML = '<i class="fas fa-check-circle"></i> Complete Sale';
+      }
+    }
+  }, 5000);
 }
 
 function showReceipt(sale) {

@@ -5,18 +5,18 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('users').select('user_id, username, full_name, role, created_at').order('created_at', { ascending: false });
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   try {
     const db = getDb();
     const { username, password, full_name, role } = req.body;
@@ -32,11 +32,11 @@ router.post('/', authenticateToken, authorizeRoles('admin'), async (req, res) =>
     }
     res.status(201).json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   try {
     const db = getDb();
     const { username, password, full_name, role } = req.body;
@@ -59,11 +59,11 @@ router.put('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) 
     }
     res.json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   try {
     const db = getDb();
     if (parseInt(req.params.id) === req.user.user_id) return res.status(400).json({ error: 'Cannot delete your own account.' });
@@ -75,7 +75,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
     if (error) throw error;
     res.json({ message: 'User deleted successfully.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

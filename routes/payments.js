@@ -4,7 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('payments')
@@ -21,11 +21,11 @@ router.get('/', authenticateToken, async (req, res) => {
     }));
     res.json(payments);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/:sale_id', authenticateToken, async (req, res) => {
+router.get('/:sale_id', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('payments').select('*').eq('sale_id', req.params.sale_id).limit(1);
@@ -33,7 +33,7 @@ router.get('/:sale_id', authenticateToken, async (req, res) => {
     if (!data[0]) return res.status(404).json({ error: 'Payment not found.' });
     res.json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

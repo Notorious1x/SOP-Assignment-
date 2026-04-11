@@ -4,7 +4,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('inventory')
@@ -21,11 +21,11 @@ router.get('/', authenticateToken, async (req, res) => {
     }));
     res.json(logs);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/low-stock', authenticateToken, async (req, res) => {
+router.get('/low-stock', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const threshold = req.query.threshold || 10;
@@ -33,11 +33,11 @@ router.get('/low-stock', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/adjust', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+router.post('/adjust', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res, next) => {
   try {
     const db = getDb();
     const { product_id, adjustment_type, quantity_change, notes } = req.body;
@@ -56,7 +56,7 @@ router.post('/adjust', authenticateToken, authorizeRoles('admin', 'manager'), as
     if (error) throw error;
     res.json({ message: 'Stock adjusted successfully.', product: data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

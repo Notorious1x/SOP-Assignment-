@@ -4,7 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/active', authenticateToken, async (req, res) => {
+router.get('/active', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('shifts').select('*')
@@ -12,11 +12,11 @@ router.get('/active', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.json(data[0] || null);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/start', authenticateToken, async (req, res) => {
+router.post('/start', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data: existing } = await db.from('shifts').select('shift_id')
@@ -31,11 +31,11 @@ router.post('/start', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.status(201).json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/end', authenticateToken, async (req, res) => {
+router.post('/end', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data: active } = await db.from('shifts').select('shift_id')
@@ -51,11 +51,11 @@ router.post('/end', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/history', authenticateToken, async (req, res) => {
+router.get('/history', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     let query = db.from('shifts').select('*, users(full_name, username)').order('start_time', { ascending: false }).limit(50);
@@ -69,7 +69,7 @@ router.get('/history', authenticateToken, async (req, res) => {
       users: undefined
     })));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

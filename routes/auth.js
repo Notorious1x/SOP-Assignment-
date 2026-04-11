@@ -6,7 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res, next) => {
   try {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password are required.' });
@@ -31,11 +31,11 @@ router.post('/login', async (req, res) => {
       user: { user_id: user.user_id, username: user.username, full_name: user.full_name, role: user.role }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/me', authenticateToken, (req, res) => {
+router.get('/me', authenticateToken, (req, res, next) => {
   res.json({ user: req.user });
 });
 

@@ -4,7 +4,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     let query = db.from('products').select('*');
@@ -18,11 +18,11 @@ router.get('/', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/categories', authenticateToken, async (req, res) => {
+router.get('/categories', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('products').select('category').not('category', 'is', null);
@@ -30,11 +30,11 @@ router.get('/categories', authenticateToken, async (req, res) => {
     const categories = [...new Set(data.map(c => c.category))].sort();
     res.json(categories);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/barcode/:barcode', authenticateToken, async (req, res) => {
+router.get('/barcode/:barcode', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('products').select('*').eq('barcode', req.params.barcode).limit(1);
@@ -42,11 +42,11 @@ router.get('/barcode/:barcode', authenticateToken, async (req, res) => {
     if (!data[0]) return res.status(404).json({ error: 'Product not found.' });
     res.json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data, error } = await db.from('products').select('*').eq('product_id', req.params.id).limit(1);
@@ -54,15 +54,17 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!data[0]) return res.status(404).json({ error: 'Product not found.' });
     res.json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res, next) => {
   try {
     const db = getDb();
     const { product_name, category, price, quantity, barcode, supplier } = req.body;
     if (!product_name || price === undefined) return res.status(400).json({ error: 'Product name and price are required.' });
+    if (isNaN(price) || price < 0) return res.status(400).json({ error: 'Invalid price.' });
+    if (quantity !== undefined && (isNaN(quantity) || quantity < 0)) return res.status(400).json({ error: 'Invalid quantity.' });
 
     const { data, error } = await db.from('products').insert({
       product_name, category: category || null, price, quantity: quantity || 0, barcode: barcode || null, supplier: supplier || null
@@ -73,11 +75,11 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'manager'), async (r
     }
     res.status(201).json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.put('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res, next) => {
   try {
     const db = getDb();
     const { product_name, category, price, quantity, barcode, supplier } = req.body;
@@ -85,6 +87,12 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async 
     const { data: existing } = await db.from('products').select('*').eq('product_id', req.params.id).limit(1);
     if (!existing[0]) return res.status(404).json({ error: 'Product not found.' });
     const e = existing[0];
+
+    if (price !== undefined && (isNaN(price) || price < 0)) return res.status(400).json({ error: 'Invalid price.' });
+    if (quantity !== undefined && (isNaN(quantity) || quantity < 0)) return res.status(400).json({ error: 'Invalid quantity.' });
+
+    if (price !== undefined && (isNaN(price) || price < 0)) return res.status(400).json({ error: 'Invalid price.' });
+    if (quantity !== undefined && (isNaN(quantity) || quantity < 0)) return res.status(400).json({ error: 'Invalid quantity.' });
 
     const { data, error } = await db.from('products').update({
       product_name: product_name || e.product_name,
@@ -100,11 +108,11 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async 
     }
     res.json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   try {
     const db = getDb();
     const { data: existing } = await db.from('products').select('product_id').eq('product_id', req.params.id).limit(1);
@@ -114,7 +122,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
     if (error) throw error;
     res.json({ message: 'Product deleted successfully.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

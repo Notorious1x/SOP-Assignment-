@@ -657,6 +657,27 @@
       </div>
     </div>
   </div>
+  
+  <div id="paystackActionModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl w-full max-w-sm">
+      <div class="p-6">
+        <h3 id="paystackActionTitle" class="text-lg font-bold text-gray-800 mb-2"><i class="fas fa-mobile-alt text-blue-600 mr-2"></i>Action Required</h3>
+        <p id="paystackActionDesc" class="text-sm text-gray-500 mb-4">Please provide the requested information.</p>
+        <form id="paystackActionForm" class="space-y-3">
+          <input type="hidden" id="paystackActionRef">
+          <input type="hidden" id="paystackActionType">
+          <div>
+            <input type="text" id="paystackActionInput" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="">
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="submit" id="paystackActionSubmitBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-sm">Submit</button>
+            <button type="button" class="modal-close flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 rounded-lg font-medium text-sm">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="fixed bottom-4 right-4 z-50 hidden">
     <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3">
       <i id="toastIcon" class="fas fa-check-circle text-green-400"></i>

@@ -4,7 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     let query = db.from('sales').select('*, users!sales_user_id_fkey(full_name), customers(name)');
@@ -27,11 +27,11 @@ router.get('/', authenticateToken, async (req, res) => {
     }));
     res.json(sales);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data: sales, error } = await db.from('sales')
@@ -64,17 +64,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
       payment: payments?.[0] || null
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { customer_id, items, payment_method, amount_paid, discount_amount, tax_rate, shift_id, paystack_reference, momo_provider, momo_phone } = req.body;
 
     if (!items || items.length === 0) return res.status(400).json({ error: 'Sale must have at least one item.' });
     if (!payment_method) return res.status(400).json({ error: 'Payment method is required.' });
+    if (amount_paid !== undefined && (isNaN(amount_paid) || amount_paid < 0)) return res.status(400).json({ error: 'Invalid amount paid.' });
+    if (discount_amount !== undefined && (isNaN(discount_amount) || discount_amount < 0)) return res.status(400).json({ error: 'Invalid discount amount.' });
 
     const { data, error } = await db.rpc('process_sale', {
       p_user_id: req.user.user_id,
@@ -119,7 +121,7 @@ router.post('/', authenticateToken, async (req, res) => {
       change_amount: data.change_amount
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 

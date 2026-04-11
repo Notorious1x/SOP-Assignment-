@@ -16,7 +16,7 @@ async function paystackRequest(endpoint, method, body) {
   return res.json();
 }
 
-router.post('/initialize', authenticateToken, async (req, res) => {
+router.post('/initialize', authenticateToken, async (req, res, next) => {
   try {
     const { amount, email, payment_type, momo_provider, momo_phone } = req.body;
 
@@ -69,11 +69,11 @@ router.post('/initialize', authenticateToken, async (req, res) => {
       });
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/verify/:reference', authenticateToken, async (req, res) => {
+router.get('/verify/:reference', authenticateToken, async (req, res, next) => {
   try {
     const result = await paystackRequest(`/transaction/verify/${req.params.reference}`, 'GET');
 
@@ -87,7 +87,67 @@ router.get('/verify/:reference', authenticateToken, async (req, res) => {
       paid_at: result.data.paid_at
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
+  }
+});
+
+router.post('/submit_otp', authenticateToken, async (req, res, next) => {
+  try {
+    const { reference, otp } = req.body;
+    if (!reference || !otp) return res.status(400).json({ error: 'Reference and OTP are required.' });
+
+    const result = await paystackRequest('/charge/submit_otp', 'POST', { reference, otp });
+    
+    if (!result.status) return res.status(400).json({ error: result.message || 'OTP submission failed.' });
+
+    res.json({
+      reference: result.data.reference || reference,
+      status: result.data.status,
+      display_text: result.data.display_text || result.message || 'Payment processed.',
+      paystack_status: result.data.status
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/submit_phone', authenticateToken, async (req, res, next) => {
+  try {
+    const { reference, phone } = req.body;
+    if (!reference || !phone) return res.status(400).json({ error: 'Reference and Phone are required.' });
+
+    const result = await paystackRequest('/charge/submit_phone', 'POST', { reference, phone });
+    
+    if (!result.status) return res.status(400).json({ error: result.message || 'Phone submission failed.' });
+
+    res.json({
+      reference: result.data.reference || reference,
+      status: result.data.status,
+      display_text: result.data.display_text || result.message || 'Payment processed.',
+      paystack_status: result.data.status
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post('/submit_birthday', authenticateToken, async (req, res, next) => {
+  try {
+    const { reference, birthday } = req.body;
+    if (!reference || !birthday) return res.status(400).json({ error: 'Reference and Birthday are required.' });
+
+    const result = await paystackRequest('/charge/submit_birthday', 'POST', { reference, birthday });
+    
+    if (!result.status) return res.status(400).json({ error: result.message || 'Birthday submission failed.' });
+
+    res.json({
+      reference: result.data.reference || reference,
+      status: result.data.status,
+      display_text: result.data.display_text || result.message || 'Payment processed.',
+      paystack_status: result.data.status
+    });
+  } catch (err) {
+    next(err);
   }
 });
 

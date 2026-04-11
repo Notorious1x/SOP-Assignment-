@@ -4,7 +4,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/export', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/export', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   try {
     const db = getDb();
     const [users, products, customers, sales, saleItems, inventory, payments] = await Promise.all([
@@ -26,11 +26,11 @@ router.get('/export', authenticateToken, authorizeRoles('admin'), async (req, re
     const filename = `pos_backup_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     res.json({ message: 'Backup created successfully.', filename, data });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/list', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+router.get('/list', authenticateToken, authorizeRoles('admin'), async (req, res, next) => {
   res.json([]);
 });
 

@@ -4,7 +4,7 @@ const { authenticateToken, authorizeRoles } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     let query = db.from('customers').select('*');
@@ -16,11 +16,11 @@ router.get('/', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.json(data);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { data: customers, error } = await db.from('customers').select('*').eq('customer_id', req.params.id).limit(1);
@@ -32,11 +32,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     res.json({ ...customers[0], purchases: purchases || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { name, phone, email, address } = req.body;
@@ -48,11 +48,11 @@ router.post('/', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.status(201).json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
     const db = getDb();
     const { name, phone, email, address } = req.body;
@@ -70,11 +70,11 @@ router.put('/:id', authenticateToken, async (req, res) => {
     if (error) throw error;
     res.json(data[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
-router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), async (req, res, next) => {
   try {
     const db = getDb();
     const { data: existing } = await db.from('customers').select('customer_id').eq('customer_id', req.params.id).limit(1);
@@ -84,7 +84,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin', 'manager'), asy
     if (error) throw error;
     res.json({ message: 'Customer deleted successfully.' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
